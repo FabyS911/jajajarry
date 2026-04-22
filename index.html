@@ -291,6 +291,12 @@ nav{display:flex;gap:.1rem;flex:1}
         <div class="prl" id="p-rl">—</div>
       </div>
       <div class="psc" id="p-sc">0</div>
+      <div id="p-vote-btns" style="display:none;flex-direction:column;gap:.35rem;flex-shrink:0">
+        <button class="dvbtn" style="padding:.4rem .9rem;font-size:.8rem"
+          onclick="instantVote(profUid, 1, this)">👍 +1</button>
+        <button class="dvbtn" style="padding:.4rem .9rem;font-size:.8rem"
+          onclick="instantVote(profUid, -1, this)">👎 −1</button>
+      </div>
     </div>
     <div class="chart-box" style="margin-bottom:1rem">
       <div class="chart-label">historial de puntaje</div>
@@ -696,6 +702,10 @@ async function loadProfile(uid) {
   psc.textContent  = (sc>0?'+':'')+sc;
   psc.className    = 'psc '+(sc>0?'pos':sc<0?'neg':'zer');
 
+  // Show vote buttons only on other people's profiles
+  const vbtns = document.getElementById('p-vote-btns');
+  vbtns.style.display = uid !== me.uid ? 'flex' : 'none';
+
   renderChartProf(ud.scoreHistory||[]);
 
   // Jokes
@@ -796,14 +806,20 @@ async function instantVote(uid, val, btn) {
       const sh = [...(ud.scoreHistory||[]), {t:Date.now(), s:newScore}];
       t.update(uRef, {totalScore:newScore, scoreHistory:sh});
     });
+    // Update score in search results if visible
     const sc_el = document.getElementById('ssc-'+uid);
     if (sc_el) {
       sc_el.textContent = (newScore>0?'+':'')+newScore;
       sc_el.className = 'suser-sc '+(newScore>0?'pos':newScore<0?'neg':'zer');
     }
+    // Update score in profile header if currently viewing that profile
+    if (profUid === uid) {
+      const psc = document.getElementById('p-sc');
+      psc.textContent = (newScore>0?'+':'')+newScore;
+      psc.className = 'psc '+(newScore>0?'pos':newScore<0?'neg':'zer');
+    }
     btn.classList.add(val===1?'up':'dn');
     setTimeout(()=>{ btn.classList.remove('up','dn'); btn.disabled=false; }, 350);
-    if (profUid === uid) await loadProfile(uid);
   } catch(e){ btn.disabled=false; alert('Error: '+e.message); }
 }
 
