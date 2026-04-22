@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎤 JajaJarry</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #080808;
+  --s1: #111111;
+  --s2: #1a1a1a;
+  --bd: #252525;
+  --bd2: #333;
+  --tx: #e8e8e8;
+  --mu: #555;
+  --mu2: #444;
+  --ye: #f0e13c;
+  --gr: #4fffb0;
+  --re: #ff5050;
+  --bl: #4fb3ff;
+  --pu: #bf4fff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--tx);min-height:100vh}
+input,textarea,button{font-family:'IBM Plex Mono',monospace}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bd2)}
+
+/* ── CONFIG BANNER ── */
+#cfg-banner{display:none;background:var(--re);color:#000;padding:.6rem 1.5rem;font-size:.75rem;
+  text-align:center;font-weight:600;position:sticky;top:0;z-index:999}
+
+/* ── AUTH ── */
+#auth{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.ticker{position:absolute;top:18px;left:0;right:0;font-size:1.6rem;opacity:.04;white-space:nowrap;
+  animation:tick 25s linear infinite;pointer-events:none}
+@keyframes tick{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
+.auth-box{background:var(--s1);border:1px solid var(--bd);border-top:3px solid var(--ye);
+  padding:2.5rem 2rem;width:100%;max-width:400px;position:relative;z-index:1}
+.auth-logo{font-family:'Abril Fatface',serif;font-size:3.5rem;color:var(--ye);text-align:center;
+  letter-spacing:-2px;line-height:1;margin-bottom:.2rem}
+.auth-sub{text-align:center;color:var(--mu);font-size:.72rem;letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:2rem}
+.auth-tabs{display:flex;border-bottom:1px solid var(--bd);margin-bottom:1.5rem}
+.atab{flex:1;background:none;border:none;color:var(--mu);cursor:pointer;font-size:.75rem;
+  letter-spacing:1px;text-transform:uppercase;padding:.65rem;transition:color .2s}
+.atab.on{color:var(--ye);border-bottom:2px solid var(--ye)}
+.af{display:flex;flex-direction:column;gap:.65rem}
+.af input{background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:.7rem .9rem;
+  font-size:.85rem;outline:none;transition:border-color .2s}
+.af input:focus{border-color:var(--ye)}
+.af input::placeholder{color:var(--mu)}
+.btn-p{background:var(--ye);color:#000;border:none;padding:.75rem;font-weight:600;font-size:.8rem;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:opacity .2s,transform .1s}
+.btn-p:hover{opacity:.88}.btn-p:active{transform:scale(.98)}
+.aerr{color:var(--re);font-size:.72rem;text-align:center;min-height:1.2em;margin-top:.3rem}
+
+/* ── LAYOUT ── */
+#app{display:none;min-height:100vh}
+header{background:var(--s1);border-bottom:1px solid var(--bd);padding:0 1.25rem;
+  display:flex;align-items:center;gap:.75rem;height:54px;position:sticky;top:0;z-index:100}
+.hlogo{font-family:'Abril Fatface',serif;font-size:1.35rem;color:var(--ye);flex-shrink:0}
+nav{display:flex;gap:.1rem;flex:1}
+.nbtn{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.7rem;letter-spacing:1px;
+  text-transform:uppercase;padding:.35rem .65rem;transition:color .2s;border-bottom:2px solid transparent}
+.nbtn:hover{color:var(--tx)}.nbtn.on{color:var(--ye);border-color:var(--ye)}
+.huser{display:flex;align-items:center;gap:.6rem;margin-left:auto;flex-shrink:0}
+.uchip{display:flex;align-items:center;gap:.4rem;cursor:pointer;padding:.3rem .65rem;
+  border:1px solid var(--bd);transition:border-color .2s}
+.uchip:hover{border-color:var(--ye)}
+.uscore{font-size:.75rem;font-weight:600;color:var(--ye)}
+.uname{font-size:.75rem;font-weight:600}
+.btnout{background:none;border:1px solid var(--bd);color:var(--mu);padding:.3rem .55rem;
+  font-size:.65rem;cursor:pointer;text-transform:uppercase;transition:all .2s}
+.btnout:hover{border-color:var(--re);color:var(--re)}
+
+/* ── VIEWS ── */
+.view{max-width:740px;margin:0 auto;padding:1.5rem 1rem}
+.vtitle{font-family:'Abril Fatface',serif;font-size:1.6rem;margin-bottom:1.25rem}
+
+/* ── FEED ── */
+.feed-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.btn-post{background:var(--ye);color:#000;border:none;padding:.5rem 1rem;font-weight:600;
+  font-size:.72rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;
+  align-items:center;gap:.4rem;transition:opacity .2s}
+.btn-post:hover{opacity:.88}
+.jlist{display:flex;flex-direction:column;gap:.6rem}
+.jcard{background:var(--s1);border:1px solid var(--bd);padding:1.1rem 1.25rem;transition:border-color .2s}
+.jcard:hover{border-color:var(--bd2)}
+.jmeta{display:flex;align-items:center;gap:.5rem;margin-bottom:.65rem;font-size:.7rem;color:var(--mu)}
+.jauthor{color:var(--ye);cursor:pointer;font-weight:600}.jauthor:hover{text-decoration:underline}
+.jtext{font-size:.9rem;line-height:1.65;margin-bottom:.9rem;font-style:italic}
+.jactions{display:flex;align-items:center;gap:.45rem}
+.vbtn{background:var(--s2);border:1px solid var(--bd);color:var(--mu);padding:.32rem .65rem;
+  font-size:.72rem;cursor:pointer;display:flex;align-items:center;gap:.25rem;transition:all .15s}
+.vbtn:hover:not(:disabled){border-color:var(--bd2);color:var(--tx)}
+.vbtn:disabled{opacity:.4;cursor:not-allowed}
+.vbtn.up{background:#0d2e1a;border-color:var(--gr);color:var(--gr)}
+.vbtn.dn{background:#2e0d0d;border-color:var(--re);color:var(--re)}
+.jscore{font-size:.82rem;font-weight:600;margin-left:.2rem}
+.jscore.pos{color:var(--gr)}.jscore.neg{color:var(--re)}.jscore.zer{color:var(--mu)}
+.cmt-preview{font-size:.67rem;color:var(--mu);margin-left:auto;max-width:180px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── LEADERBOARD ── */
+.lbrow{background:var(--s1);border:1px solid var(--bd);padding:.85rem 1.25rem;
+  display:flex;align-items:center;gap:.9rem;cursor:pointer;transition:border-color .2s;margin-bottom:.4rem}
+.lbrow:hover{border-color:var(--ye)}.lbrow.me{border-left:3px solid var(--ye)}
+.lbpos{font-family:'Abril Fatface',serif;font-size:1.1rem;color:var(--mu);width:2rem;text-align:center;flex-shrink:0}
+.lbpos.g{color:#ffd700}.lbpos.s{color:#c0c0c0}.lbpos.b{color:#cd7f32}
+.lbemoji{font-size:1.2rem;flex-shrink:0}
+.lbinfo{flex:1;min-width:0}
+.lbname{font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbrl{font-size:.67rem;color:var(--mu);text-transform:uppercase;letter-spacing:1px;margin-top:.1rem}
+.lbsc{font-family:'Abril Fatface',serif;font-size:1.35rem}
+.lbsc.pos{color:var(--gr)}.lbsc.neg{color:var(--re)}.lbsc.zer{color:var(--mu)}
+.chart-box{background:var(--s1);border:1px solid var(--bd);padding:1.25rem;margin-top:1.25rem}
+.chart-label{font-size:.72rem;color:var(--mu);letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem}
+
+/* ── PROFILE ── */
+.phead{background:var(--s1);border:1px solid var(--bd);border-top:3px solid var(--ye);
+  padding:1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap}
+.pav{font-size:2.5rem;width:64px;height:64px;display:flex;align-items:center;justify-content:center;
+  background:var(--s2);border:1px solid var(--bd);flex-shrink:0}
+.pname{font-family:'Abril Fatface',serif;font-size:1.75rem}
+.prl{font-size:.72rem;color:var(--mu);text-transform:uppercase;letter-spacing:1px;margin-top:.15rem}
+.psc{font-family:'Abril Fatface',serif;font-size:2.25rem;margin-left:auto}
+.psc.pos{color:var(--gr)}.psc.neg{color:var(--re)}.psc.zer{color:var(--mu)}
+.backbtn{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.72rem;
+  text-transform:uppercase;letter-spacing:1px;padding:0 0 1rem 0;display:flex;
+  align-items:center;gap:.35rem;transition:color .2s}
+.backbtn:hover{color:var(--ye)}
+.prof-sec{font-family:'Abril Fatface',serif;font-size:1rem;color:var(--mu);margin:1rem 0 .65rem}
+
+/* ── MODAL ── */
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;
+  justify-content:center;z-index:200;padding:1rem}
+.mbox{background:var(--s1);border:1px solid var(--bd);border-top:3px solid var(--ye);
+  padding:2rem;width:100%;max-width:480px}
+.mtitle{font-family:'Abril Fatface',serif;font-size:1.4rem;margin-bottom:1.1rem}
+.mf{display:flex;flex-direction:column;gap:.65rem}
+.mf textarea,.mf input{background:var(--s2);border:1px solid var(--bd);color:var(--tx);
+  padding:.7rem .9rem;font-size:.85rem;outline:none;transition:border-color .2s}
+.mf textarea:focus,.mf input:focus{border-color:var(--ye)}
+.mf textarea{resize:vertical;min-height:100px}
+.mf input::placeholder,.mf textarea::placeholder{color:var(--mu)}
+.macts{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.3rem}
+.btncanc{background:none;border:1px solid var(--bd);color:var(--mu);padding:.5rem .9rem;
+  font-size:.72rem;cursor:pointer;text-transform:uppercase;transition:all .2s}
+.btncanc:hover{border-color:var(--bd2);color:var(--tx)}
+.mjoketext{font-style:italic;font-size:.82rem;color:var(--mu);margin-bottom:1rem;
+  max-height:80px;overflow:hidden;border-left:2px solid var(--ye);padding-left:.75rem}
+
+/* ── EMPTY / LOADING ── */
+.loading{text-align:center;color:var(--mu);padding:2.5rem;font-size:.8rem}
+.empty{text-align:center;color:var(--mu);padding:2.5rem 1rem}
+.empty span{font-size:2.5rem;display:block;margin-bottom:.65rem}
+
+/* ── RANK TOOLTIP ── */
+.rankpill{display:inline-flex;align-items:center;gap:.3rem;font-size:.67rem;color:var(--mu);
+  background:var(--s2);border:1px solid var(--bd);padding:.2rem .5rem;margin-top:.2rem}
+
+@media(max-width:520px){
+  .phead{flex-direction:column;text-align:center}.psc{margin-left:0}
+  .auth-logo{font-size:2.5rem}
+  header{padding:0 .75rem}
+  .nbtn{padding:.35rem .4rem;font-size:.62rem}
+  .huser{gap:.35rem}
+}
+</style>
+</head>
+<body>
+
+<div id="cfg-banner">
+  ⚠ Firebase no configurado — abre index.html y reemplaza los valores en FIREBASE_CONFIG (línea ~270)
+</div>
+
+<!-- ============================================================ AUTH ============================================================ -->
+<div id="auth">
+  <div class="ticker">🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤 😂 🎤</div>
+  <div class="auth-box">
+    <div class="auth-logo">JajaJarry</div>
+    <div class="auth-sub">// rating chistes desde 2026 //</div>
+    <div class="auth-tabs">
+      <button class="atab on" onclick="switchTab('login')">Entrar</button>
+      <button class="atab" onclick="switchTab('register')">Registrarse</button>
+    </div>
+    <div id="f-login" class="af">
+      <input type="email" id="l-email" placeholder="correo electrónico" autocomplete="email">
+      <input type="password" id="l-pass" placeholder="contraseña" autocomplete="current-password">
+      <button class="btn-p" onclick="doLogin()">→ Entrar</button>
+    </div>
+    <div id="f-reg" class="af" style="display:none">
+      <input type="text" id="r-user" placeholder="nombre de usuario (ej: juanito23)" maxlength="20">
+      <input type="email" id="r-email" placeholder="correo electrónico">
+      <input type="password" id="r-pass" placeholder="contraseña (mín. 6 caracteres)">
+      <button class="btn-p" onclick="doRegister()">→ Crear cuenta</button>
+    </div>
+    <div class="aerr" id="aerr"></div>
+  </div>
+</div>
+
+<!-- ============================================================ APP ============================================================ -->
+<div id="app">
+  <header>
+    <span class="hlogo">🎤 CS</span>
+    <nav>
+      <button class="nbtn on" id="nb-feed"   onclick="showView('feed')">Feed</button>
+      <button class="nbtn"    id="nb-lb"     onclick="showView('lb')">Ranking</button>
+      <button class="nbtn"    id="nb-prof"   onclick="showMyProfile()">Mi Perfil</button>
+    </nav>
+    <div class="huser">
+      <div class="uchip" onclick="showMyProfile()">
+        <span id="h-badge">🌱</span>
+        <span class="uname" id="h-name"></span>
+        <span class="uscore" id="h-score">0</span>
+      </div>
+      <button class="btnout" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+
+  <!-- FEED -->
+  <div id="v-feed" class="view">
+    <div class="feed-top">
+      <h2 class="vtitle">Chistes 🎭</h2>
+      <button class="btn-post" onclick="openPostModal()">+ nuevo chiste</button>
+    </div>
+    <div class="jlist" id="jlist"><div class="loading">cargando chistes...</div></div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="v-lb" class="view" style="display:none">
+    <h2 class="vtitle">Ranking 🏆</h2>
+    <div id="lblist"><div class="loading">cargando...</div></div>
+    <div class="chart-box">
+      <div class="chart-label">evolución de puntajes</div>
+      <canvas id="chart-all"></canvas>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div id="v-prof" class="view" style="display:none">
+    <button class="backbtn" id="backbtn" onclick="goBack()">← volver</button>
+    <div class="phead">
+      <div class="pav" id="p-av">👤</div>
+      <div>
+        <div class="pname" id="p-name">—</div>
+        <div class="prl" id="p-rl">—</div>
+      </div>
+      <div class="psc" id="p-sc">0</div>
+    </div>
+    <div class="chart-box" style="margin-bottom:1rem">
+      <div class="chart-label">historial de puntaje</div>
+      <canvas id="chart-prof"></canvas>
+    </div>
+    <div class="prof-sec">Sus chistes</div>
+    <div class="jlist" id="p-jokes"><div class="loading">cargando...</div></div>
+  </div>
+</div>
+
+<!-- MODAL: nuevo chiste -->
+<div id="m-post" class="moverlay" onclick="bgClose(event,'m-post')">
+  <div class="mbox">
+    <div class="mtitle">Nuevo Chiste 🎤</div>
+    <div class="mf">
+      <textarea id="joke-txt" placeholder="Escribe tu chiste aquí... (máx. 500 chars)" maxlength="500"></textarea>
+      <div class="macts">
+        <button class="btncanc" onclick="closeM('m-post')">Cancelar</button>
+        <button class="btn-p" style="min-width:120px" onclick="submitJoke()">Publicar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: votar -->
+<div id="m-vote" class="moverlay" onclick="bgClose(event,'m-vote')">
+  <div class="mbox">
+    <div class="mtitle" id="vm-title">Votar chiste</div>
+    <div class="mjoketext" id="vm-jtext"></div>
+    <div class="mf">
+      <input type="text" id="vm-cmt" placeholder="Comentario opcional..." maxlength="100">
+      <div class="macts">
+        <button class="btncanc" onclick="closeM('m-vote')">Cancelar</button>
+        <button class="btn-p" style="background:var(--re);min-width:90px" onclick="submitVote(-1)">👎  −1</button>
+        <button class="btn-p" style="min-width:90px" onclick="submitVote(1)">👍  +1</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ⚙  FIREBASE CONFIG
+   1. Ve a https://console.firebase.google.com
+   2. Crea un proyecto → Agrega app web → copia la config
+   3. Activa Authentication → Email/Password
+   4. Activa Firestore Database (empieza en modo production)
+   5. Pega las reglas de firestore.rules en la consola
+   ══════════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "PASTE_YOUR_API_KEY",
+  authDomain:        "PASTE_YOUR_AUTH_DOMAIN",
+  projectId:         "PASTE_YOUR_PROJECT_ID",
+  storageBucket:     "PASTE_YOUR_STORAGE_BUCKET",
+  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID",
+  appId:             "PASTE_YOUR_APP_ID"
+};
+
+const NOT_CFG = Object.values(FIREBASE_CONFIG).some(v => v.startsWith('PASTE_'));
+if (NOT_CFG) document.getElementById('cfg-banner').style.display = 'block';
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ══ ESTADO ══ */
+let me = null, meData = null;
+let allJokes = [], jokeMap = {}, jUnsub = null;
+let prevView = 'feed', voteTarget = null, profUid = null;
+let chartProf = null, chartAll = null;
+
+/* ══ RANGOS ══ */
+const RANKS = [
+  {min:100,  e:'👑', l:'El Maestro'},
+  {min:60,   e:'🏆', l:'Leyenda'},
+  {min:30,   e:'⭐', l:'Estrella'},
+  {min:15,   e:'🎤', l:'Comediante'},
+  {min:0,    e:'😄', l:'Graciosillo'},
+  {min:-10,  e:'😬', l:'Aprendiz'},
+  {min:-1e9, e:'💀', l:'Rey del Cringe'},
+];
+const getRank = s => RANKS.find(r => s >= r.min);
+
+/* ══ AUTH FLOW ══ */
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    me = user;
+    await reloadMe();
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').style.display  = 'block';
+    updateHeader();
+    showView('feed');
+    startJokesListener();
+  } else {
+    me = null; meData = null;
+    document.getElementById('auth').style.display = 'flex';
+    document.getElementById('app').style.display  = 'none';
+    if (jUnsub) { jUnsub(); jUnsub = null; }
+  }
+});
+
+async function reloadMe() {
+  const d = await db.collection('users').doc(me.uid).get();
+  meData = d.data();
+}
+
+function switchTab(t) {
+  document.getElementById('f-login').style.display = t==='login' ? 'flex':'none';
+  document.getElementById('f-reg').style.display   = t==='register' ? 'flex':'none';
+  document.querySelectorAll('.atab').forEach((el,i) =>
+    el.classList.toggle('on', (i===0&&t==='login')||(i===1&&t==='register')));
+  document.getElementById('aerr').textContent = '';
+}
+
+function setErr(msg){ document.getElementById('aerr').textContent = msg; }
+
+async function doRegister() {
+  const un = document.getElementById('r-user').value.trim();
+  const em = document.getElementById('r-email').value.trim();
+  const pw = document.getElementById('r-pass').value;
+  if (!un||!em||!pw) return setErr('Completa todos los campos.');
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(un)) return setErr('Usuario: 3-20 chars, solo letras/números/_');
+  try {
+    const snap = await db.collection('users').where('username','==',un).limit(1).get();
+    if (!snap.empty) return setErr('Ese nombre de usuario ya existe.');
+    const cred = await auth.createUserWithEmailAndPassword(em, pw);
+    await db.collection('users').doc(cred.user.uid).set({
+      username: un, email: em, totalScore: 0,
+      scoreHistory: [{t: Date.now(), s: 0}],
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e){ setErr(xlErr(e.code)); }
+}
+
+async function doLogin() {
+  const em = document.getElementById('l-email').value.trim();
+  const pw = document.getElementById('l-pass').value;
+  if (!em||!pw) return setErr('Ingresa correo y contraseña.');
+  try { await auth.signInWithEmailAndPassword(em, pw); }
+  catch(e){ setErr(xlErr(e.code)); }
+}
+
+async function doLogout() { if(jUnsub) jUnsub(); await auth.signOut(); }
+
+function xlErr(c){
+  const m={
+    'auth/email-already-in-use':'Ese correo ya está registrado.',
+    'auth/invalid-email':'Correo inválido.',
+    'auth/weak-password':'Contraseña muy débil (mín. 6 chars).',
+    'auth/user-not-found':'Usuario no encontrado.',
+    'auth/wrong-password':'Contraseña incorrecta.',
+    'auth/invalid-credential':'Correo o contraseña incorrectos.',
+    'auth/too-many-requests':'Demasiados intentos. Espera un momento.',
+  };
+  return m[c]||('Error: '+c);
+}
+
+/* ══ HEADER ══ */
+function updateHeader() {
+  if (!meData) return;
+  const r = getRank(meData.totalScore);
+  document.getElementById('h-badge').textContent = r.e;
+  document.getElementById('h-name').textContent  = meData.username;
+  document.getElementById('h-score').textContent = meData.totalScore;
+}
+
+/* ══ VISTAS ══ */
+function showView(name) {
+  ['feed','lb','prof'].forEach(v => {
+    document.getElementById('v-'+v).style.display = 'none';
+  });
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('on'));
+  document.getElementById('v-'+name).style.display = 'block';
+  const nb = document.getElementById('nb-'+name);
+  if (nb) nb.classList.add('on');
+  if (name === 'lb') loadLB();
+  if (name !== 'prof') prevView = name;
+}
+
+function showMyProfile() {
+  openProfile(me.uid);
+  document.getElementById('nb-prof').classList.add('on');
+  document.querySelectorAll('.nbtn').forEach((b,i)=>{if(i<2)b.classList.remove('on')});
+  document.getElementById('backbtn').style.display = 'none';
+}
+
+function goBack() { showView(prevView); }
+
+/* ══ JOKES FEED ══ */
+function startJokesListener() {
+  if (jUnsub) jUnsub();
+  jUnsub = db.collection('jokes').orderBy('createdAt','desc').limit(60)
+    .onSnapshot(snap => {
+      allJokes = snap.docs.map(d => ({id:d.id,...d.data()}));
+      allJokes.forEach(j => jokeMap[j.id] = j);
+      renderFeed();
+    });
+}
+
+function renderFeed() {
+  const list = document.getElementById('jlist');
+  if (!allJokes.length) {
+    list.innerHTML = `<div class="empty"><span>🎭</span>Sin chistes todavía.<br>¡Sé el primero!</div>`;
+    return;
+  }
+  list.innerHTML = allJokes.map(j => jCard(j)).join('');
+}
+
+function jCard(j) {
+  const mv = j.voters?.[me.uid];
+  const own = j.authorUid === me.uid;
+  const sc = j.score||0;
+  const sc_c = sc>0?'pos':sc<0?'neg':'zer';
+  const d = j.createdAt?.toDate?.() ?? new Date();
+  const ds = d.toLocaleDateString('es-CO',{day:'numeric',month:'short'});
+  const uc = mv?.value===1?'up':'', dc = mv?.value===-1?'dn':'';
+  const cmtHtml = mv?.comment
+    ? `<span class="cmt-preview" title="${esc(mv.comment)}">"${esc(mv.comment)}"</span>`
+    : '';
+  const dis = own ? 'disabled title="No puedes votar tu propio chiste"' : '';
+  return `<div class="jcard">
+    <div class="jmeta">
+      <span class="jauthor" onclick="openProfile('${j.authorUid}')">${esc(j.authorUsername)}</span>
+      <span>·</span><span>${ds}</span>
+      ${own?'<span style="color:var(--ye);font-size:.67rem">• tuyo</span>':''}
+    </div>
+    <div class="jtext">${esc(j.text)}</div>
+    <div class="jactions">
+      <button class="vbtn ${uc}" ${dis} onclick="openVote('${j.id}')">👍</button>
+      <button class="vbtn ${dc}" ${dis} onclick="openVote('${j.id}')">👎</button>
+      <span class="jscore ${sc_c}">${sc>0?'+':''}${sc}</span>
+      ${cmtHtml}
+    </div>
+  </div>`;
+}
+
+/* ══ POST JOKE ══ */
+function openPostModal(){ openM('m-post'); document.getElementById('joke-txt').value=''; }
+
+async function submitJoke() {
+  const text = document.getElementById('joke-txt').value.trim();
+  if (!text) return;
+  try {
+    await db.collection('jokes').add({
+      authorUid: me.uid, authorUsername: meData.username,
+      text, score: 0, voters: {},
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeM('m-post');
+  } catch(e){ alert('Error: '+e.message); }
+}
+
+/* ══ VOTAR ══ */
+function openVote(jokeId) {
+  const j = jokeMap[jokeId];
+  if (!j || j.authorUid === me.uid) return;
+  voteTarget = j;
+  const mv = j.voters?.[me.uid];
+  document.getElementById('vm-title').textContent = mv ? 'Cambiar voto' : 'Votar chiste';
+  document.getElementById('vm-jtext').textContent = j.text;
+  document.getElementById('vm-cmt').value = mv?.comment||'';
+  openM('m-vote');
+}
+
+async function submitVote(val) {
+  if (!voteTarget) return;
+  const {id:jokeId, authorUid} = voteTarget;
+  const comment = document.getElementById('vm-cmt').value.trim();
+  closeM('m-vote');
+
+  const jRef = db.collection('jokes').doc(jokeId);
+  const uRef = db.collection('users').doc(authorUid);
+
+  try {
+    await db.runTransaction(async t => {
+      const [jDoc, uDoc] = await Promise.all([t.get(jRef), t.get(uRef)]);
+      const jd = jDoc.data(), ud = uDoc.data();
+      const voters = {...(jd.voters||{})};
+      const prev   = voters[me.uid];
+      const delta  = prev ? (val - prev.value) : val;
+
+      voters[me.uid] = {value:val, comment, votedAt:Date.now()};
+      const newJScore = (jd.score||0) + delta;
+      const newUScore = (ud.totalScore||0) + delta;
+      const sh = [...(ud.scoreHistory||[]), {t:Date.now(), s:newUScore}];
+
+      t.update(jRef, {score:newJScore, voters});
+      t.update(uRef, {totalScore:newUScore, scoreHistory:sh});
+    });
+    // Refresh own header if voted on someone else that happens to be us (edge case)
+    if (authorUid === me.uid) { await reloadMe(); updateHeader(); }
+    // Refresh profile chart if currently viewing that user
+    if (profUid === authorUid) await loadProfile(authorUid);
+  } catch(e){ alert('Error al votar: '+e.message); }
+}
+
+/* ══ LEADERBOARD ══ */
+async function loadLB() {
+  document.getElementById('lblist').innerHTML = '<div class="loading">cargando ranking...</div>';
+  try {
+    const snap = await db.collection('users').orderBy('totalScore','desc').get();
+    const users = snap.docs.map(d => ({uid:d.id,...d.data()}));
+    renderLB(users);
+    renderChartAll(users);
+  } catch(e){ console.error(e); }
+}
+
+function renderLB(users) {
+  if (!users.length){
+    document.getElementById('lblist').innerHTML='<div class="loading">sin usuarios aún</div>';
+    return;
+  }
+  const MEDAL=['🥇','🥈','🥉'];
+  document.getElementById('lblist').innerHTML = users.map((u,i) => {
+    const r = getRank(u.totalScore), pos=i+1;
+    const sc=u.totalScore||0, scc=sc>0?'pos':sc<0?'neg':'zer';
+    const isMe = u.uid===me.uid;
+    const posEl = pos<=3
+      ? `<span class="lbpos ${['g','s','b'][pos-1]}">${MEDAL[pos-1]}</span>`
+      : `<span class="lbpos">#${pos}</span>`;
+    return `<div class="lbrow${isMe?' me':''}" onclick="openProfile('${u.uid}')">
+      ${posEl}
+      <span class="lbemoji">${r.e}</span>
+      <div class="lbinfo">
+        <div class="lbname">${esc(u.username)}${isMe?' <span style="color:var(--mu);font-size:.67rem">(tú)</span>':''}</div>
+        <div class="lbrl">${r.l}</div>
+      </div>
+      <span class="lbsc ${scc}">${sc>0?'+':''}${sc}</span>
+    </div>`;
+  }).join('');
+}
+
+const CCOLORS=['#f0e13c','#4fffb0','#ff5050','#4fb3ff','#bf4fff','#ff9f50','#50ffff','#ff50bf'];
+
+function renderChartAll(users) {
+  if (chartAll) chartAll.destroy();
+  const allTimes = [...new Set(
+    users.flatMap(u => (u.scoreHistory||[]).map(p=>p.t))
+  )].sort((a,b)=>a-b);
+
+  if (allTimes.length < 2) {
+    document.getElementById('chart-all').closest('.chart-box')
+      .querySelector('.chart-label').textContent = 'evolución de puntajes (sin datos aún)';
+    return;
+  }
+  const labels = allTimes.map(t =>
+    new Date(t).toLocaleDateString('es-CO',{day:'numeric',month:'short'}));
+  const datasets = users.slice(0,8).map((u,i) => {
+    const hist = (u.scoreHistory||[]).sort((a,b)=>a.t-b.t);
+    const data = allTimes.map(t => {
+      const e = [...hist].reverse().find(p=>p.t<=t);
+      return e ? e.s : null;
+    });
+    return {
+      label: u.username, data, spanGaps:true, tension:.3, fill:false,
+      borderColor: CCOLORS[i%CCOLORS.length],
+      backgroundColor: CCOLORS[i%CCOLORS.length]+'20',
+      pointRadius:3,
+    };
+  });
+  const ctx = document.getElementById('chart-all').getContext('2d');
+  chartAll = new Chart(ctx, {
+    type:'line', data:{labels,datasets},
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{color:'#666',font:{family:"'IBM Plex Mono'",size:10}}}},
+      scales:{
+        x:{ticks:{color:'#444',font:{family:"'IBM Plex Mono'",size:10}},grid:{color:'#1a1a1a'}},
+        y:{ticks:{color:'#444',font:{family:"'IBM Plex Mono'",size:10}},grid:{color:'#1a1a1a'}}
+      }
+    }
+  });
+}
+
+/* ══ PROFILE ══ */
+async function openProfile(uid) {
+  profUid = uid;
+  const isMe = uid === me.uid;
+  document.getElementById('backbtn').style.display = isMe ? 'none' : 'flex';
+  showView('prof');
+  if (!isMe) {
+    document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
+    document.getElementById('nb-prof').classList.add('on');
+  }
+  await loadProfile(uid);
+}
+
+async function loadProfile(uid) {
+  const uDoc = await db.collection('users').doc(uid).get();
+  const ud = uDoc.data();
+  if (!ud) return;
+
+  const r = getRank(ud.totalScore);
+  document.getElementById('p-av').textContent   = r.e;
+  document.getElementById('p-name').textContent = ud.username;
+  document.getElementById('p-rl').textContent   = r.l;
+  const sc = ud.totalScore||0;
+  const psc = document.getElementById('p-sc');
+  psc.textContent  = (sc>0?'+':'')+sc;
+  psc.className    = 'psc '+(sc>0?'pos':sc<0?'neg':'zer');
+
+  renderChartProf(ud.scoreHistory||[]);
+
+  // Jokes
+  const jSnap = await db.collection('jokes')
+    .where('authorUid','==',uid).orderBy('createdAt','desc').limit(25).get();
+  const pjokes = jSnap.docs.map(d=>({id:d.id,...d.data()}));
+  pjokes.forEach(j=>jokeMap[j.id]=j);
+  const pjl = document.getElementById('p-jokes');
+  pjl.innerHTML = pjokes.length
+    ? pjokes.map(j=>jCard(j)).join('')
+    : '<div class="empty"><span>😶</span>Sin chistes todavía</div>';
+}
+
+function renderChartProf(sh) {
+  if (chartProf) chartProf.destroy();
+  const sorted = [...sh].sort((a,b)=>a.t-b.t);
+  const lbl = document.getElementById('chart-prof').closest('.chart-box').querySelector('.chart-label');
+  if (sorted.length < 2) {
+    lbl.textContent = 'historial de puntaje (aún sin votos)';
+    const c = document.getElementById('chart-prof').getContext('2d');
+    c.clearRect(0,0,9999,9999);
+    return;
+  }
+  lbl.textContent = 'historial de puntaje';
+  const labels = sorted.map(p => new Date(p.t).toLocaleDateString('es-CO',{day:'numeric',month:'short'}));
+  const data   = sorted.map(p => p.s);
+  const ctx = document.getElementById('chart-prof').getContext('2d');
+  chartProf = new Chart(ctx, {
+    type:'line', data:{labels,
+      datasets:[{
+        label:'Puntaje', data,
+        borderColor:'#f0e13c', backgroundColor:'rgba(240,225,60,.07)',
+        tension:.35, fill:true, pointRadius:4, pointBackgroundColor:'#f0e13c',
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#444',font:{family:"'IBM Plex Mono'",size:10}},grid:{color:'#1a1a1a'}},
+        y:{ticks:{color:'#444',font:{family:"'IBM Plex Mono'",size:10}},grid:{color:'#1a1a1a'}}
+      }
+    }
+  });
+}
+
+/* ══ UTILS ══ */
+function openM(id){ document.getElementById(id).style.display='flex'; }
+function closeM(id){ document.getElementById(id).style.display='none'; }
+function bgClose(e,id){ if(e.target.id===id) closeM(id); }
+function esc(s){ return String(s||'')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ══ ENTER KEY SHORTCUTS ══ */
+document.getElementById('l-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('r-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doRegister(); });
+</script>
+</body>
+</html>
