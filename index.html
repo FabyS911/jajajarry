@@ -166,6 +166,31 @@ nav{display:flex;gap:.1rem;flex:1}
 .empty{text-align:center;color:var(--mu);padding:2.5rem 1rem}
 .empty span{font-size:2.5rem;display:block;margin-bottom:.65rem}
 
+/* ── SEARCH USERS ── */
+.search-section{margin-bottom:1.5rem;border:1px solid var(--bd);background:var(--s1)}
+.search-header{display:flex;align-items:center;gap:.65rem;padding:.75rem 1rem;border-bottom:1px solid var(--bd)}
+.search-icon{color:var(--mu);font-size:.9rem;flex-shrink:0}
+.search-input{flex:1;background:none;border:none;color:var(--tx);font-size:.85rem;outline:none}
+.search-input::placeholder{color:var(--mu)}
+.search-results{display:none}
+.suser-card{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;
+  border-top:1px solid var(--bd);transition:background .15s}
+.suser-card:hover{background:var(--s2)}
+.suser-em{font-size:1.1rem;flex-shrink:0}
+.suser-info{flex:1;min-width:0}
+.suser-name{font-weight:600;font-size:.85rem}
+.suser-rl{font-size:.67rem;color:var(--mu);text-transform:uppercase;letter-spacing:1px}
+.suser-sc{font-family:'Abril Fatface',serif;font-size:1.1rem;margin-right:.5rem}
+.suser-sc.pos{color:var(--gr)}.suser-sc.neg{color:var(--re)}.suser-sc.zer{color:var(--mu)}
+.dvbtns{display:flex;gap:.35rem;flex-shrink:0}
+.dvbtn{background:var(--s2);border:1px solid var(--bd);color:var(--mu);padding:.28rem .6rem;
+  font-size:.75rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:.2rem}
+.dvbtn:hover:not(:disabled){border-color:var(--bd2);color:var(--tx)}
+.dvbtn:disabled{opacity:.35;cursor:not-allowed}
+.dvbtn.up{background:#0d2e1a;border-color:var(--gr);color:var(--gr)}
+.dvbtn.dn{background:#2e0d0d;border-color:var(--re);color:var(--re)}
+.search-empty{padding:.75rem 1rem;font-size:.75rem;color:var(--mu);border-top:1px solid var(--bd)}
+
 /* ── RANK TOOLTIP ── */
 .rankpill{display:inline-flex;align-items:center;gap:.3rem;font-size:.67rem;color:var(--mu);
   background:var(--s2);border:1px solid var(--bd);padding:.2rem .5rem;margin-top:.2rem}
@@ -235,6 +260,14 @@ nav{display:flex;gap:.1rem;flex:1}
       <h2 class="vtitle">Chistes 🎭</h2>
       <button class="btn-post" onclick="openPostModal()">+ nuevo chiste</button>
     </div>
+    <div class="search-section">
+      <div class="search-header">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="search-inp" placeholder="Buscar persona para votar directo..." maxlength="20"
+          oninput="onSearchInput()" autocomplete="off">
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
     <div class="jlist" id="jlist"><div class="loading">cargando chistes...</div></div>
   </div>
 
@@ -298,7 +331,31 @@ nav{display:flex;gap:.1rem;flex:1}
   </div>
 </div>
 
-<script>
+<!-- MODAL: voto directo a persona -->
+<div id="m-dvote" class="moverlay" onclick="bgClose(event,'m-dvote')">
+  <div class="mbox">
+    <div class="mtitle" id="dvm-title">Votar a persona</div>
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding:.75rem;
+      background:var(--s2);border:1px solid var(--bd)">
+      <span id="dvm-em" style="font-size:1.5rem"></span>
+      <div>
+        <div style="font-weight:600;font-size:.9rem" id="dvm-name"></div>
+        <div style="font-size:.67rem;color:var(--mu);text-transform:uppercase;letter-spacing:1px" id="dvm-rl"></div>
+      </div>
+      <span style="margin-left:auto;font-family:'Abril Fatface',serif;font-size:1.3rem" id="dvm-sc"></span>
+    </div>
+    <div class="mf">
+      <input type="text" id="dvm-cmt" placeholder="Comentario opcional..." maxlength="100">
+      <div class="macts">
+        <button class="btncanc" onclick="closeM('m-dvote')">Cancelar</button>
+        <button class="btn-p" style="background:var(--re);min-width:90px" onclick="submitDirectVote(-1)">👎  −1</button>
+        <button class="btn-p" style="min-width:90px" onclick="submitDirectVote(1)">👍  +1</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 /* ══════════════════════════════════════════════════════════════
    ⚙  FIREBASE CONFIG
    1. Ve a https://console.firebase.google.com
@@ -329,6 +386,7 @@ let me = null, meData = null;
 let allJokes = [], jokeMap = {}, jUnsub = null;
 let prevView = 'feed', voteTarget = null, profUid = null;
 let chartProf = null, chartAll = null;
+let dvoteTarget = null, searchTimer = null;
 
 /* ══ RANGOS ══ */
 const RANKS = [
@@ -704,6 +762,95 @@ function renderChartProf(sh) {
       }
     }
   });
+}
+
+/* ══ SEARCH USERS ══ */
+function onSearchInput() {
+  clearTimeout(searchTimer);
+  const q = document.getElementById('search-inp').value.trim();
+  const res = document.getElementById('search-results');
+  if (!q) { res.style.display='none'; res.innerHTML=''; return; }
+  res.style.display='block';
+  res.innerHTML='<div class="search-empty">buscando...</div>';
+  searchTimer = setTimeout(() => searchUsers(q), 300);
+}
+
+async function searchUsers(q) {
+  const res = document.getElementById('search-results');
+  try {
+    const ql = q.toLowerCase();
+    const snap = await db.collection('users')
+      .orderBy('username').startAt(ql).endAt(ql+'\uf8ff').limit(8).get();
+    const users = snap.docs.map(d=>({uid:d.id,...d.data()}))
+      .filter(u => u.uid !== me.uid);
+    if (!users.length) {
+      res.innerHTML='<div class="search-empty">Sin resultados para "'+esc(q)+'"</div>';
+      return;
+    }
+    res.innerHTML = users.map(u => {
+      const r = getRank(u.totalScore||0);
+      const sc = u.totalScore||0, scc = sc>0?'pos':sc<0?'neg':'zer';
+      const dv = u.directVoters?.[me.uid];
+      const uc = dv?.value===1?'up':'', dc = dv?.value===-1?'dn':'';
+      return `<div class="suser-card">
+        <span class="suser-em">${r.e}</span>
+        <div class="suser-info">
+          <div class="suser-name" style="cursor:pointer" onclick="openProfile('${u.uid}')">${esc(u.username)}</div>
+          <div class="suser-rl">${r.l}</div>
+        </div>
+        <span class="suser-sc ${scc}">${sc>0?'+':''}${sc}</span>
+        <div class="dvbtns">
+          <button class="dvbtn ${uc}" onclick="openDirectVote('${u.uid}')">👍</button>
+          <button class="dvbtn ${dc}" onclick="openDirectVote('${u.uid}')">👎</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ res.innerHTML='<div class="search-empty">Error buscando</div>'; console.error(e); }
+}
+
+async function openDirectVote(uid) {
+  const uDoc = await db.collection('users').doc(uid).get();
+  const ud = uDoc.data();
+  if (!ud) return;
+  dvoteTarget = {uid, ...ud};
+  const r = getRank(ud.totalScore||0);
+  const sc = ud.totalScore||0, scc = sc>0?'pos':sc<0?'neg':'zer';
+  const dv = ud.directVoters?.[me.uid];
+  document.getElementById('dvm-title').textContent = dv ? 'Cambiar voto directo' : 'Votar directo';
+  document.getElementById('dvm-em').textContent   = r.e;
+  document.getElementById('dvm-name').textContent = ud.username;
+  document.getElementById('dvm-rl').textContent   = r.l;
+  const sc_el = document.getElementById('dvm-sc');
+  sc_el.textContent = (sc>0?'+':'')+sc;
+  sc_el.className   = scc;
+  document.getElementById('dvm-cmt').value = dv?.comment||'';
+  openM('m-dvote');
+}
+
+async function submitDirectVote(val) {
+  if (!dvoteTarget) return;
+  const {uid: targetUid} = dvoteTarget;
+  const comment = document.getElementById('dvm-cmt').value.trim();
+  closeM('m-dvote');
+
+  const uRef = db.collection('users').doc(targetUid);
+  try {
+    await db.runTransaction(async t => {
+      const uDoc = await t.get(uRef);
+      const ud = uDoc.data();
+      const dv = {...(ud.directVoters||{})};
+      const prev  = dv[me.uid];
+      const delta = prev ? (val - prev.value) : val;
+      dv[me.uid] = {value:val, comment, votedAt:Date.now(), voterUsername: meData.username};
+      const newScore = (ud.totalScore||0) + delta;
+      const sh = [...(ud.scoreHistory||[]), {t:Date.now(), s:newScore}];
+      t.update(uRef, {totalScore:newScore, scoreHistory:sh, directVoters:dv});
+    });
+    // Refresh search results
+    const q = document.getElementById('search-inp').value.trim();
+    if (q) searchUsers(q);
+    if (profUid === targetUid) await loadProfile(targetUid);
+  } catch(e){ alert('Error al votar: '+e.message); }
 }
 
 /* ══ UTILS ══ */
