@@ -1,4 +1,4 @@
-# 🎤 JajaJarry
+# 🎤 JajaJarry | 100% Self Coding
 
 > **La red social que nadie pidió, pero todos merecíamos:** una base de datos para coleccionar, puntuar y venerar chistes malos.
 
